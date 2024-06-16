@@ -1,152 +1,106 @@
 /* * * * * * * * * *
  *   disTime .js   *
- *  Version 0.9.0  *
+ *  Version 1.0.0  *
  *  License:  MIT  *
  * Simon  Waldherr *
  * * * * * * * * * */
 
-/*jslint browser: true, indent: 2 */
+/*jslint browser: true, indent: 2, plusplus: true */
 /*globals languages, checkForAnd */
 /*exported disTime */
 
 var disTimeRepeater, disTimeObject, disTime;
+
+"use strict";
+
 disTimeObject = {
-  parseTimestamp: function (language, thisTime, systemTime, detailed) {
-    "use strict";
-    var insert, distime, years, month, weeks, days, hours, minute, second;
+  parseTimestamp: function (language, thisTime, systemTime, detailed = false) {
+    var insert, distime, years, months, weeks, days, hours, minutes, seconds;
 
     function pInt(string) {
       return parseInt(string, 10);
     }
 
-    if (detailed === undefined) {
-      detailed = false;
-    }
+    distime = Math.abs(systemTime - thisTime);
+    insert = systemTime > thisTime ? ' ' + language.words.preAgo + ' ' : ' ' + language.words.inFuture + ' ';
 
-    distime = (systemTime > thisTime) ? systemTime - thisTime : thisTime - systemTime;
-    if (systemTime > thisTime) {
-      insert = ' ' + language.words.preAgo + ' ';
-    } else {
-      insert = ' ' + language.words.inFuture + ' ';
-    }
+    years = pInt(distime / 31536000);
+    months = pInt((distime % 31536000) / 2419200);
+    weeks = pInt((distime % 2419200) / 604800);
+    days = pInt((distime % 604800) / 86400);
+    hours = pInt((distime % 86400) / 3600);
+    minutes = pInt((distime % 3600) / 60);
+    seconds = distime % 60;
 
-    if (distime > 31536000) {
-      //years
-      years = pInt(pInt(distime) / pInt(31536000));
-      insert += years + ' ' + languages.declOfNum(language.mode, years, language.year);
-    }
+    insert += this.formatTimePart(language, years, 'year');
+    insert += this.formatTimePart(language, months, 'month', detailed, insert);
+    insert += this.formatTimePart(language, weeks, 'week', detailed, insert);
+    insert += this.formatTimePart(language, days, 'day', detailed, insert);
+    insert += this.formatTimePart(language, hours, 'hour', detailed, insert);
+    insert += this.formatTimePart(language, minutes, 'minute', detailed, insert);
+    insert += this.formatTimePart(language, seconds, 'second', detailed, insert);
 
-    if (((distime < 60 * 60 * 24 * 365) && (distime > 60 * 60 * 24 * 7 * 4)) || ((distime > 60 * 60 * 24 * 365) && detailed && (pInt(distime % 31536000 / 2419200) !== 0))) {
-      //months
-      insert += checkForAnd(detailed, insert, language);
-      month = pInt(distime % 31536000 / 2419200);
-      insert += month + ' ' + languages.declOfNum(language.mode, month, language.month);
-
-      if (((distime < 60 * 60 * 24 * 365) && detailed && (pInt(distime % 2419200 / 86400) !== 0))) {
-        //days
-        insert += checkForAnd(detailed, insert, language);
-        days = pInt(distime % 2419200 / 86400);
-        insert += days + ' ' + languages.declOfNum(language.mode, days, language.day);
-      }
-    }
-
-    if (((distime < 60 * 60 * 24 * 7 * 4) && (distime > 60 * 60 * 24 * 7)) || ((distime < 10368000) && (distime > 2419199) && detailed && (pInt(distime % 2592000 / 2419200) !== 0))) {
-      //weeks
-      insert += checkForAnd(detailed, insert, language);
-
-      weeks = pInt(distime % 2419200 / 604800);
-      insert += weeks + ' ' + languages.declOfNum(language.mode, weeks, language.week);
-    }
-
-    if (((distime < 60 * 60 * 24 * 7) && (distime > 86399)) || ((distime < 2419200) && (distime > 604799) && detailed && (pInt(distime % 604800 / 86400) !== 0))) {
-      //days
-      insert += checkForAnd(detailed, insert, language);
-
-      days = pInt(distime % 2419200 / 86400);
-      insert += days + ' ' + languages.declOfNum(language.mode, days, language.day);
-    }
-
-    if (((distime < 86400) && (distime > 3599)) || ((distime < 604800) && (distime > 86399) && detailed && (pInt(distime % 86400 / 3600) !== 0))) {
-      //hours
-      insert += checkForAnd(detailed, insert, language);
-
-      hours = pInt(distime % 86400 / 3600);
-      insert += hours + ' ' + languages.declOfNum(language.mode, hours, language.hour);
-    }
-
-    if (((distime < 3600) && (distime > 59)) || ((distime < 86400) && (distime > 3599) && detailed && (pInt(distime % 3600 / 60) !== 0))) {
-      //minutes
-      insert += checkForAnd(detailed, insert, language);
-
-      minute = pInt(distime % 3600 / 60);
-      insert += minute + ' ' + languages.declOfNum(language.mode, minute, language.minute);
-    }
-
-    if ((distime < 60) || ((distime < 3600) && (distime > 59) && detailed && (distime % 60 !== 0))) {
-      //seconds
-      insert += checkForAnd(detailed, insert, language);
-
-      second = distime % 60;
-      insert += second + ' ' + languages.declOfNum(language.mode, second, language.second);
-    }
-
-    if (systemTime > thisTime) {
-      insert += ' ' + language.words.postAgo;
-    } else {
-      insert += ' ' + language.words.postInFuture;
-    }
-
+    insert += systemTime > thisTime ? ' ' + language.words.postAgo : ' ' + language.words.postInFuture;
     return insert;
+  },
+
+  formatTimePart: function (language, value, unit, detailed = false, currentInsert = '') {
+    //"use strict";
+    if (value > 0 || (detailed && value === 0 && currentInsert)) {
+      let conjunction = checkForAnd(detailed, currentInsert, language);
+      return `${conjunction}${value} ${languages.declOfNum(language.mode, value, language[unit])}`;
+    }
+    return '';
   }
 };
 
-disTime = function (timedifference, language, detailed) {
-  "use strict";
-  var elements,
-    elementcount,
-    smallest,
-    i,
-    distime,
-    timestamp,
-    elementtime;
+disTime = function (timedifference, language, detailed = false) {
+  //"use strict";
+  var elements = document.getElementsByClassName('distime'),
+    elementcount = elements.length,
+    timestamp = parseInt(Date.now() / 1000, 10) + timedifference,
+    smallest = timestamp,
+    elementtime, distime, i;
 
-  if (detailed === undefined) {
-    detailed = false;
-  }
-  if (language === undefined) {
-    language = navigator.language || navigator.userLanguage;
-  }
-  if (languages[language] === undefined) {
-    if (languages[language.split('-')[0]] !== undefined) {
-      language = language.split('-')[0];
-    } else {
-      language = 'en';
-    }
-  }
+  language = determineLanguage(language);
 
-  timestamp = parseInt(Date.now() / 1000, 10) + timedifference;
-  elements = document.getElementsByClassName('distime');
-  elementcount = elements.length;
-  smallest = timestamp;
-  for (i = 0; i < elementcount; i += 1) {
+  for (i = 0; i < elementcount; i++) {
     elementtime = parseInt(elements[i].getAttribute('data-time'), 10);
     elements[i].innerHTML = disTimeObject.parseTimestamp(languages[language], elementtime, timestamp, detailed);
-    distime = (timestamp > elementtime) ? timestamp - elementtime : elementtime - timestamp;
+    distime = Math.abs(timestamp - elementtime);
     if (!elements[i].hasAttribute('alt')) {
       elements[i].setAttribute('title', new Date(elementtime * 1000).toString());
     }
-    if (distime < smallest) {
-      smallest = distime;
+    smallest = Math.min(smallest, distime);
+  }
+
+  window.clearTimeout(disTimeRepeater);
+  disTimeRepeater = setTimeout(disTime, getTimeoutDuration(smallest, detailed), timedifference, language, detailed);
+};
+
+function determineLanguage(language) {
+  //"use strict";
+  if (!language) {
+    language = navigator.language || navigator.userLanguage;
+  }
+  if (!languages[language]) {
+    language = language.split('-')[0] || 'en';
+    if (!languages[language]) {
+      language = 'en';
     }
   }
-  window.clearTimeout(disTimeRepeater);
-  if ((smallest < 61) || (detailed && smallest < 3601)) {
-    disTimeRepeater = setTimeout(disTime, 1000, timedifference, language, detailed);
-  } else if ((smallest < 3601) || (detailed && smallest < 86400)) {
-    disTimeRepeater = setTimeout(disTime, 60000, timedifference, language, detailed);
-  } else if ((smallest < 86400) || detailed) {
-    disTimeRepeater = setTimeout(disTime, 3600001, timedifference, language, detailed);
+  return language;
+}
+
+function getTimeoutDuration(smallest, detailed) {
+  //"use strict";
+  if (smallest < 61 || (detailed && smallest < 3601)) {
+    return 1000; // 1 second
+  } else if (smallest < 3601 || (detailed && smallest < 86400)) {
+    return 60000; // 1 minute
+  } else if (smallest < 86400 || detailed) {
+    return 3600001; // 1 hour
   } else {
-    disTimeRepeater = setTimeout(disTime, 86400001, timedifference, language, detailed);
+    return 86400001; // 1 day
   }
-};
+}

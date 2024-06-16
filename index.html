@@ -18,13 +18,14 @@
 
 /*global disTime, disTimeRepeater */
 /*jslint browser: true, indent: 2 */
+"use strict";
+    
 function random(min, max) {
-  "use strict";
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function generateExamples(config) {
-  "use strict";
+  //"use strict";
   var i,
     time = new Date(),
     examplesElement = document.getElementById('examples'),
@@ -41,7 +42,7 @@ function generateExamples(config) {
 }
 
 function init() {
-  "use strict";
+  //"use strict";
   var config,
     hash,
     i,
@@ -58,7 +59,7 @@ function init() {
 }
 
 function changeDemo() {
-  "use strict";
+  //"use strict";
   var lang,
     detail;
   lang = document.getElementById('lang').value;
